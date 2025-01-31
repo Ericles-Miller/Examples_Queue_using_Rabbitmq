@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
-import { RabbitMqProcessController } from './rabbit-mq-process.controller';
-import { RabbitMqProcessService } from './rabbit-mq-process.service';
+import { ProducerService } from './producer.service';
+import { ProducerController } from './producer.controller';
 import { ClientsModule, Transport } from '@nestjs/microservices';
 
 @Module({
   imports: [
     ClientsModule.register([
       {
-        name: 'MATH_SERVICE',
+        name: 'RMQ_SERVICE',
         transport: Transport.RMQ,
         options: {
           urls: ['amqp://guest:guest@localhost:5672'],
@@ -19,8 +19,8 @@ import { ClientsModule, Transport } from '@nestjs/microservices';
       },
     ]),
   ],
-
-  controllers: [RabbitMqProcessController],
-  providers: [RabbitMqProcessService],
+  controllers: [ProducerController],
+  providers: [ProducerService],
+  exports: [ProducerService],
 })
-export class RabbitMqProcessModule {}
+export class ProducerModule {}

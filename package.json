@@ -20,10 +20,12 @@
     "test:e2e": "jest --config ./apps/work_rabbit-mq/test/jest-e2e.json"
   },
   "dependencies": {
+    "@golevelup/nestjs-rabbitmq": "^5.7.0",
     "@nestjs/common": "^10.0.0",
     "@nestjs/core": "^10.0.0",
     "@nestjs/microservices": "^11.0.6",
     "@nestjs/platform-express": "^10.0.0",
+    "@nestjs/swagger": "^11.0.3",
     "amqp-connection-manager": "^4.1.14",
     "amqplib": "^0.10.5",
     "reflect-metadata": "^0.2.0",

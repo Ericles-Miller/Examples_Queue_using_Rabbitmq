@@ -1,5 +1,11 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { RabbitMqProcessService } from './rabbit-mq-process.service';
+import {
+  Ctx,
+  MessagePattern,
+  Payload,
+  RmqContext,
+} from '@nestjs/microservices';
 
 @Controller()
 export class RabbitMqProcessController {
@@ -7,8 +13,9 @@ export class RabbitMqProcessController {
     private readonly rabbitMqProcessService: RabbitMqProcessService,
   ) {}
 
-  @Get()
-  getHello(): string {
-    return this.rabbitMqProcessService.getHello();
+  @MessagePattern('queue_name.*')
+  ConsumerQueue(@Payload() message: string, @Ctx() context: RmqContext): void {
+    console.log(context.getMessage());
+    return this.rabbitMqProcessService.consumerQueue(message);
   }
 }
