@@ -6,6 +6,6 @@ export class ProducerService {
   constructor(@Inject('RMQ_SERVICE') private readonly instance: ClientRMQ) {}
 
   async sendMessageToQueue(message: string): Promise<void> {
-    await this.instance.emit<string>('notifications', message);
+    await this.instance.emit<string>('queue_name', message);
   }
 }
