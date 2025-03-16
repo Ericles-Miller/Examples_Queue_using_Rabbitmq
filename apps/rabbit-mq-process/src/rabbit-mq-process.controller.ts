@@ -13,9 +13,8 @@ export class RabbitMqProcessController {
     private readonly rabbitMqProcessService: RabbitMqProcessService,
   ) {}
 
-  @MessagePattern('queue_name.*')
+  @MessagePattern('queue_name')
   ConsumerQueue(@Payload() message: string, @Ctx() context: RmqContext): void {
-    console.log(context.getMessage());
-    return this.rabbitMqProcessService.consumerQueue(message);
+    this.rabbitMqProcessService.consumerQueue(message);
   }
 }
