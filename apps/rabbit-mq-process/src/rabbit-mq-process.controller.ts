@@ -14,7 +14,14 @@ export class RabbitMqProcessController {
   ) {}
 
   @MessagePattern('queue_name')
-  ConsumerQueue(@Payload() message: string, @Ctx() context: RmqContext): void {
-    this.rabbitMqProcessService.consumerQueue(message);
+  async ConsumerQueue(
+    @Payload() message: string,
+    @Ctx() context: RmqContext,
+  ): Promise<void> {
+    const channel = context.getChannelRef();
+    const originalMessage = context.getMessage();
+
+    await this.rabbitMqProcessService.consumerQueue(message);
+    channel.ack(originalMessage);
   }
 }
