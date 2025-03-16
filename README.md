@@ -12,7 +12,7 @@ Cada implementação está em uma branch separada, com sua própria documentaç�
 
 ### Implementações Disponíveis
 
-1. **[Fila Durável com Persistência e Confirmação](https://github.com/ericles/Work_RabbitMq_Micro_Services_Simple_Queue/tree/durable-persistent-ack)** - Branch: `durable-persistent-ack`
+1. **[Fila Durável com Persistência e Confirmação](https://github.com/Ericles-Miller/Work_RabbitMq_Micro_Services_Simple_Queue/tree/queue_durable_persistent_)** - Branch: `durable-persistent-ack`
    - ✅ Durabilidade: Fila sobrevive a reinicializações
    - ✅ Persistência: Mensagens salvas em disco
    - ✅ Confirmação: Acknowledgment manual de mensagens
