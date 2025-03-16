@@ -1,4 +1,8 @@
-import { Controller } from '@nestjs/common';
+import {
+  Controller,
+  InternalServerErrorException,
+  Logger,
+} from '@nestjs/common';
 import { RabbitMqProcessService } from './rabbit-mq-process.service';
 import {
   Ctx,
@@ -9,6 +13,8 @@ import {
 
 @Controller()
 export class RabbitMqProcessController {
+  private readonly logger = new Logger(RabbitMqProcessController.name);
+
   constructor(
     private readonly rabbitMqProcessService: RabbitMqProcessService,
   ) {}
@@ -21,7 +27,18 @@ export class RabbitMqProcessController {
     const channel = context.getChannelRef();
     const originalMessage = context.getMessage();
 
-    await this.rabbitMqProcessService.consumerQueue(message);
-    channel.ack(originalMessage);
+    try {
+      this.logger.log(`Processing message: ${message}`);
+      await this.rabbitMqProcessService.consumerQueue(message);
+      channel.ack(originalMessage);
+      this.logger.log(`Message processed: ${message}`);
+    } catch (error) {
+      this.logger.error(`Error processing message: ${error.message}`);
+
+      // reject message and put it back in the queue
+      channel.nack(originalMessage, false, true);
+
+      throw new InternalServerErrorException(error);
+    }
   }
 }
