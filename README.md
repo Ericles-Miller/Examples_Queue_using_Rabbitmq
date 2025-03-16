@@ -1,3 +1,74 @@
+# RabbitMQ - Exemplos de Implementações de Filas
+
+Este repositório contém diferentes implementações de filas usando RabbitMQ e NestJS, cada uma demonstrando diferentes características e configurações. O objetivo é fornecer exemplos práticos de como implementar diferentes tipos de filas de acordo com suas necessidades específicas.
+
+## 🎯 Objetivo
+
+O propósito deste repositório é servir como referência para desenvolvedores que precisam implementar diferentes tipos de filas em seus projetos, demonstrando as melhores práticas e configurações para cada caso de uso.
+
+## 📑 Índice de Implementações
+
+Cada implementação está em uma branch separada, com sua própria documentação e exemplo completo.
+
+### Implementações Disponíveis
+
+1. **[Fila Durável com Persistência e Confirmação](https://github.com/ericles/Work_RabbitMq_Micro_Services_Simple_Queue/tree/durable-persistent-ack)** - Branch: `durable-persistent-ack`
+   - ✅ Durabilidade: Fila sobrevive a reinicializações
+   - ✅ Persistência: Mensagens salvas em disco
+   - ✅ Confirmação: Acknowledgment manual de mensagens
+   - 📝 [Documentação Detalhada](./QueueREADME.MD)
+
+## 🚀 Como Usar
+
+1. Clone o repositório
+```bash
+git clone https://github.com/ericles/Work_RabbitMq_Micro_Services_Simple_Queue.git
+```
+
+2. Escolha a implementação
+```bash
+git checkout <nome-da-branch>
+```
+
+3. Instale as dependências
+```bash
+yarn install
+```
+
+4. Inicie o RabbitMQ
+```bash
+docker-compose up -d
+```
+
+5. Execute o projeto
+```bash
+# development
+yarn run start
+
+# watch mode
+yarn run start:dev api && yarn start:dev rabbit-mq-process
+```
+
+## 💡 Próximas Implementações
+
+As seguintes implementações estão planejadas para serem adicionadas:
+
+- [ ] Fila Simples (sem confirmação/não durável)
+- [ ] Fila com Dead Letter Exchange
+- [ ] Fila com TTL (Time-To-Live)
+- [ ] Fila com Prioridade
+- [ ] Fila com Retry Pattern
+
+## 📚 Recursos
+
+- [Documentação do RabbitMQ](https://www.rabbitmq.com/documentation.html)
+- [Documentação do NestJS](https://docs.nestjs.com/)
+- [Microservices com NestJS](https://docs.nestjs.com/microservices/rabbitmq)
+
+## 📝 Licença
+
+Este projeto está sob a licença MIT.
+
 <p align="center">
   <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
 </p>
