@@ -1,6 +1,6 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
-import { RabbitMQService } from 'apps/api/src/rabbimq/rabbimq.service';
-import { RabbitMQConnection } from 'apps/api/src/rabbimq/rabbitmq.config';
+import { RabbitMQService } from 'queue_using_amqplib/apps/api/src/rabbimq/rabbimq.service';
+import { RabbitMQConnection } from 'queue_using_amqplib/apps/api/src/rabbimq/rabbitmq.config';
 
 @Injectable()
 export class ConsumerService implements OnModuleInit {
