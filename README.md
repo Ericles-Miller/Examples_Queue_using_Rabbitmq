@@ -8,6 +8,6 @@ O propósito deste repositório é servir como referência para desenvolvedores 
 
 ## 📑 Índice de Implementações
 
-Cada implementação está em uma branch separada, com sua própria documentação e exemplo completo.
+Cada implementação está em uma pasta separada, com sua própria documentação e exemplo completo.
 
 
