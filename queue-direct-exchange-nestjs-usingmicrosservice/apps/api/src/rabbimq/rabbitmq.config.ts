@@ -3,6 +3,7 @@ import * as amqp from 'amqplib';
 import { EXCHANGE_NAME, EXCHANGE_TYPE, queues } from './queue.constants';
 import { IQueue } from './queue.interface';
 import { IPublishMessage } from './publish-message.interface';
+import 'dotenv/config';
 
 export class RabbitMQConfig {
   private static connection: amqp.ChannelModel;
@@ -11,7 +12,10 @@ export class RabbitMQConfig {
 
   static async connect(): Promise<void> {
     try {
-      this.connection = await amqp.connect(process.env.RABBITMQ_URL);
+      this.connection = await amqp.connect(process.env.RABBITMQ_URL, {
+        timeout: 15000,
+        heartbeat: 60,
+      });
 
       if (this.connection) {
         this.channel = await this.connection.createChannel();

@@ -1,31 +1,55 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
-import { RabbitMQService } from 'apps/api/src/rabbimq/rabbimq.service';
-import { RabbitMQConnection } from 'apps/api/src/rabbimq/rabbitmq.config';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { RabbitMQConfig } from 'apps/api/src/rabbimq/rabbitmq.config';
+import { queues } from 'apps/api/src/rabbimq/queue.constants';
+import { IQueue } from 'apps/api/src/rabbimq/queue.interface';
 
 @Injectable()
 export class ConsumerService implements OnModuleInit {
-  constructor(private readonly rabbitMQService: RabbitMQService) {}
+  private readonly logger = new Logger(ConsumerService.name);
 
   async onModuleInit() {
-    await RabbitMQConnection.connect();
+    await RabbitMQConfig.connect();
+    await this.setupConsumers();
   }
 
-  async consume(queue: string): Promise<void> {
-    try {
-      const channel = RabbitMQConnection.getChannel();
-      await channel.assertQueue(queue, { durable: true });
+  private async setupConsumers(): Promise<void> {
+    const channel = RabbitMQConfig.getChannel();
 
-      channel.consume(queue, async (message) => {
-        await this.exampleService(message);
-        channel.ack(message);
+    for (const queue of queues) {
+      await channel.assertQueue(queue.name, {
+        durable: queue.durable,
       });
-    } catch (error) {
-      console.error('Error consuming message:', error);
-      throw error;
+
+      channel.consume(queue.name, async (message) => {
+        try {
+          if (message) {
+            const content = JSON.parse(message.content.toString());
+
+            await this.processMessage(content, queue);
+            channel.ack(message);
+          }
+        } catch (error) {
+          this.logger.error(`Error processing message from ${queue.name}:`, error);
+          channel.nack(message, false, true);
+        }
+      });
     }
   }
 
-  async exampleService(message: string): Promise<void> {
-    console.log('Received message:', message);
+  private async processMessage(message: any, queue: IQueue): Promise<void> {
+    switch (queue.name) {
+      case 'queue1':
+        console.log('received message:', message);
+        break;
+      case 'queue2':
+        console.log('received message:', message);
+        break;
+      case 'queue3':
+        console.log('received message:', message);
+        break;
+      case 'queue4':
+        console.log('received message:', message);
+        break;
+    }
   }
 }

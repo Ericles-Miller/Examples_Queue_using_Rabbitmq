@@ -49,50 +49,6 @@ yarn run start
 yarn run start:dev api && yarn start:dev rabbit-mq-process
 ```
 
-## 💡 Próximas Implementações
-
-As seguintes implementações estão planejadas para serem adicionadas:
-
-- [ ] Fila Simples (sem confirmação/não durável)
-- [ ] Fila com Dead Letter Exchange
-- [ ] Fila com TTL (Time-To-Live)
-- [ ] Fila com Prioridade
-- [ ] Fila com Retry Pattern
-
-## 📚 Recursos
-
-- [Documentação do RabbitMQ](https://www.rabbitmq.com/documentation.html)
-- [Documentação do NestJS](https://docs.nestjs.com/)
-- [Microservices com NestJS](https://docs.nestjs.com/microservices/rabbitmq)
-
-## 📝 Licença
-
-Este projeto está sob a licença MIT.
-
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
-
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://coveralls.io/github/nestjs/nest?branch=master" target="_blank"><img src="https://coveralls.io/repos/github/nestjs/nest/badge.svg?branch=master#9" alt="Coverage" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
-
 ## Description
 
 [Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
@@ -132,3 +88,307 @@ $ yarn run test:cov
 ## Resources
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+
+# Tutorial english
+
+# RabbitMQ Direct Exchange NestJS Microservice
+
+This project demonstrates a RabbitMQ implementation using Direct Exchange pattern with NestJS microservices.
+
+## Architecture Overview
+
+- **Exchange Type**: Direct
+- **Exchange Name**: direct_exchange
+- **Exchange Durability**: Durable (survives broker restarts)
+
+### Queue Configuration
+
+We have 4 queues configured with different properties:
+
+1. **queue1**
+   - Durable: true
+   - Routing Keys: ['key1', 'key2']
+
+2. **queue2**
+   - Durable: false
+   - Routing Keys: ['key1', 'key2']
+
+3. **queue3**
+   - Durable: true
+   - Routing Key: ['key3']
+
+4. **queue4**
+   - Durable: true
+   - Routing Key: ['key4']
+
+## Setup Instructions
+
+1. Start RabbitMQ using Docker:
+
+```bash
+docker-compose up -d
+```
+
+This will start RabbitMQ with:
+- Management UI on port 15672
+- AMQP on port 5672
+- Default credentials: admin/admin
+
+2. Access RabbitMQ Management UI:
+- URL: http://localhost:15672
+- Username: admin
+- Password: admin
+
+## Implementation Details
+
+### 1. Queue Configuration (queue.constants.ts)
+```typescript
+export const EXCHANGE_TYPE = 'direct';
+export const EXCHANGE_NAME = 'direct_exchange';
+
+export const queues: IQueue[] = [
+  {
+    name: 'queue1',
+    durable: true,
+    routingKeys: ['key1', 'key2']
+  },
+  // ... other queues
+];
+```
+
+### 2. Message Publishing (rabbitmq.service.ts)
+Example of sending messages to different queues:
+
+```typescript
+// Send to queue1 with key1
+await sendToQueue1key1(message: string)
+
+// Send to queue2 with key2
+await sendToQueue2key2(message: string)
+```
+
+### 3. Message Consumer (rabbit-mq-consumer.service.ts)
+```typescript
+@Injectable()
+export class ConsumerService implements OnModuleInit {
+  async onModuleInit() {
+    await RabbitMQConfig.connect();
+    await this.setupConsumers();
+  }
+
+  private async setupConsumers(): Promise<void> {
+    const channel = RabbitMQConfig.getChannel();
+    
+    for (const queue of queues) {
+      await channel.assertQueue(queue.name, { 
+        durable: queue.durable 
+      });
+      
+      channel.consume(queue.name, async (message) => {
+        try {
+          const content = JSON.parse(message.content.toString());
+          await this.processMessage(content, queue.name);
+          channel.ack(message);
+        } catch (error) {
+          channel.nack(message, false, true);
+        }
+      });
+    }
+  }
+}
+```
+
+### 4. Message Options Interface
+```typescript
+interface IMessageOptions {
+  persistent?: boolean;
+  queueName?: string;
+  expiration?: string | number;
+  priority?: number;
+}
+```
+
+## Features
+
+- **Durability**: Messages persist through broker restarts
+- **Direct Exchange**: Messages are routed based on exact routing key matches
+- **Multiple Bindings**: Queues can bind to multiple routing keys
+- **Error Handling**: Comprehensive error handling with message acknowledgment
+- **Message Persistence**: Options for message persistence and queue durability
+
+## Connection Management
+
+The RabbitMQ connection is managed through `RabbitMQConfig` class which handles:
+- Connection establishment
+- Channel creation
+- Exchange setup
+- Queue creation and bindings
+- Message publishing
+- Graceful connection closure
+
+## Error Handling
+
+- Messages are acknowledged only after successful processing
+- Failed messages are requeued using `channel.nack()`
+- Connection errors are handled with proper error messages
+- Automatic reconnection attempts on connection failure
+
+## Best Practices Implemented
+
+1. Durable exchanges and queues for critical messages
+2. Message persistence for important data
+3. Proper channel and connection management
+4. Graceful shutdown handling
+5. Comprehensive error handling and logging
+
+# Tutorial in portuguese
+# RabbitMQ Direct Exchange NestJS Microservice
+
+Este projeto demonstra uma implementação RabbitMQ usando o padrão Direct Exchange com microsserviços NestJS.
+
+## Visão Geral da Arquitetura
+
+- **Tipo de Exchange**: Direct
+- **Nome do Exchange**: direct_exchange
+- **Durabilidade do Exchange**: Durável (sobrevive a reinicializações do broker)
+
+### Configuração das Filas
+
+Temos 4 filas configuradas com diferentes propriedades:
+
+1. **queue1**
+   - Durável: sim
+   - Chaves de Roteamento: ['key1', 'key2']
+
+2. **queue2**
+   - Durável: não
+   - Chaves de Roteamento: ['key1', 'key2']
+
+3. **queue3**
+   - Durável: sim
+   - Chave de Roteamento: ['key3']
+
+4. **queue4**
+   - Durável: sim
+   - Chave de Roteamento: ['key4']
+
+## Instruções de Configuração
+
+1. Inicie o RabbitMQ usando Docker:
+
+```bash
+docker-compose up -d
+```
+
+Isso iniciará o RabbitMQ com:
+- Interface de gerenciamento na porta 15672
+- AMQP na porta 5672
+- Credenciais padrão: admin/admin
+
+2. Acesse a Interface de Gerenciamento do RabbitMQ:
+- URL: http://localhost:15672
+- Usuário: admin
+- Senha: admin
+
+## Detalhes da Implementação
+
+### 1. Configuração das Filas (queue.constants.ts)
+```typescript
+export const EXCHANGE_TYPE = 'direct';
+export const EXCHANGE_NAME = 'direct_exchange';
+
+export const queues: IQueue[] = [
+  {
+    name: 'queue1',
+    durable: true,
+    routingKeys: ['key1', 'key2']
+  },
+  // ... outras filas
+];
+```
+
+### 2. Publicação de Mensagens (rabbitmq.service.ts)
+Exemplo de envio de mensagens para diferentes filas:
+
+```typescript
+// Enviar para queue1 com key1
+await sendToQueue1key1(message: string)
+
+// Enviar para queue2 com key2
+await sendToQueue2key2(message: string)
+```
+
+### 3. Consumidor de Mensagens (rabbit-mq-consumer.service.ts)
+```typescript
+@Injectable()
+export class ConsumerService implements OnModuleInit {
+  async onModuleInit() {
+    await RabbitMQConfig.connect();
+    await this.setupConsumers();
+  }
+
+  private async setupConsumers(): Promise<void> {
+    const channel = RabbitMQConfig.getChannel();
+    
+    for (const queue of queues) {
+      await channel.assertQueue(queue.name, { 
+        durable: queue.durable 
+      });
+      
+      channel.consume(queue.name, async (message) => {
+        try {
+          const content = JSON.parse(message.content.toString());
+          await this.processMessage(content, queue.name);
+          channel.ack(message);
+        } catch (error) {
+          channel.nack(message, false, true);
+        }
+      });
+    }
+  }
+}
+```
+
+### 4. Interface de Opções de Mensagem
+```typescript
+interface IMessageOptions {
+  persistent?: boolean;
+  queueName?: string;
+  expiration?: string | number;
+  priority?: number;
+}
+```
+
+## Funcionalidades
+
+- **Durabilidade**: Mensagens persistem através de reinicializações do broker
+- **Direct Exchange**: Mensagens são roteadas com base em correspondências exatas de chaves de roteamento
+- **Múltiplos Bindings**: Filas podem se vincular a múltiplas chaves de roteamento
+- **Tratamento de Erros**: Tratamento abrangente de erros com confirmação de mensagens
+- **Persistência de Mensagens**: Opções para persistência de mensagens e durabilidade de filas
+
+## Gerenciamento de Conexão
+
+A conexão RabbitMQ é gerenciada através da classe `RabbitMQConfig` que lida com:
+- Estabelecimento de conexão
+- Criação de canal
+- Configuração de exchange
+- Criação de filas e bindings
+- Publicação de mensagens
+- Fechamento adequado de conexão
+
+## Tratamento de Erros
+
+- Mensagens são confirmadas apenas após processamento bem-sucedido
+- Mensagens com falha são recolocadas na fila usando `channel.nack()`
+- Erros de conexão são tratados com mensagens apropriadas
+- Tentativas automáticas de reconexão em caso de falha
+
+## Melhores Práticas Implementadas
+
+1. Exchanges e filas duráveis para mensagens críticas
+2. Persistência de mensagens para dados importantes
+3. Gerenciamento adequado de canais e conexões
+4. Tratamento adequado de desligamento
+5. Tratamento e registro abrangente de erros

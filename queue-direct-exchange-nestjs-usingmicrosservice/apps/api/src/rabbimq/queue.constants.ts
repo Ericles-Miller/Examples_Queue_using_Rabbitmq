@@ -1,4 +1,4 @@
-import { IQueue } from "./queue.interface";
+import { IQueue } from './queue.interface';
 
 export const EXCHANGE_TYPE = 'direct' as const;
 export const EXCHANGE_NAME = 'direct_exchange' as const;
