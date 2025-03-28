@@ -1,7 +1,10 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import * as amqp from 'amqplib';
+import { EXCHANGE_NAME, EXCHANGE_TYPE, queues } from './queue.constants';
+import { IQueue } from './queue.interface';
+import { IPublishMessage } from './publish-message.interface';
 
-export class RabbitMQConnection {
+export class RabbitMQConfig {
   private static connection: amqp.ChannelModel;
   private static channel: any = null;
   private static readonly typeExchange = 'direct';
@@ -17,42 +20,55 @@ export class RabbitMQConnection {
           durable: true,
         });
 
-        await this.setQueue('queue1', true);
-        await this.setQueue('queue2', false);
-
-        await this.setBindQueue('queue1', this.typeExchange, 'key1');
-        await this.setBindQueue('queue1', this.typeExchange, 'key2');
-
-        /// create a new config to send unique routing key to queue2
-        await this.setBindQueue('queue2', this.typeExchange, 'key2');
+        await this.setupExchange();
+        await this.setupQueuesAndBindings();
       }
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Error connecting to RabbitMQ:',
-        error,
-      );
+      throw new InternalServerErrorException('Error connecting to RabbitMQ:', error);
     }
   }
 
-  static getChannel(): any {
+  private static async setupExchange(): Promise<void> {
+    await this.channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, {
+      durable: true,
+    });
+  }
+
+  private static async setupQueuesAndBindings(): Promise<void> {
+    for (const queue of queues) {
+      await this.setupQueue(queue);
+    }
+  }
+
+  private static async setupQueue(queue: IQueue): Promise<void> {
+    await this.channel.assertQueue(queue.name, { durable: queue.durable });
+
+    for (const routingKey of queue.routingKeys) {
+      await this.channel.bindQueue(queue.name, EXCHANGE_NAME, routingKey);
+    }
+  }
+
+  static getChannel(): amqp.Channel {
     if (!this.channel) {
-      throw new InternalServerErrorException(
-        'RabbitMQ channel not initialized',
-      );
+      throw new InternalServerErrorException('RabbitMQ channel not initialized');
     }
     return this.channel;
   }
 
-  static async setQueue(queueName: string, durable: boolean): Promise<any> {
-    await this.channel.assertQueue(queueName, { durable });
-  }
+  static async publishMessage({ routingKey, message, options }: IPublishMessage): Promise<boolean> {
+    try {
+      if (options.queueName) {
+        await this.channel.assertQueue(options.queueName, { durable: true });
+        await this.channel.bindQueue(options.queueName, EXCHANGE_NAME, routingKey);
+      }
 
-  static async setBindQueue(
-    queueName: string,
-    exchangeName: string,
-    routingKey: string,
-  ): Promise<void> {
-    await this.channel.bindQueue(queueName, exchangeName, routingKey);
+      return this.channel.publish(EXCHANGE_NAME, routingKey, Buffer.from(JSON.stringify(message)), {
+        persistent: options.persistent ?? true,
+        options,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error publishing message:', error);
+    }
   }
 
   static async closeConnection(): Promise<void> {
@@ -64,10 +80,7 @@ export class RabbitMQConnection {
         await this.connection.close();
       }
     } catch (error) {
-      throw new InternalServerErrorException(
-        'Error closing RabbitMQ connection:',
-        error,
-      );
+      throw new InternalServerErrorException('Error closing RabbitMQ connection:', error);
     }
   }
 }
