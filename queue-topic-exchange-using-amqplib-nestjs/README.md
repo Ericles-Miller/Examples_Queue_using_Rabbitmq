@@ -1,6 +1,6 @@
-# RabbitMQ Direct Exchange NestJS Microservice
+# RabbitMQ Topic Exchange NestJS Microservice
 
-This project demonstrates a RabbitMQ implementation using Direct Exchange pattern with NestJS microservices.
+This project demonstrates a RabbitMQ implementation using topic Exchange pattern with NestJS microservices.
 
 ## Architecture Overview
 
@@ -390,7 +390,7 @@ export interface IPublishMessage {
 ## Features
 
 - **Durability**: Messages persist through broker restarts
-- **Direct Exchange**: Messages are routed based on exact routing key matches
+- **Topic Exchange**: Messages are routed based on exact routing key matches
 - **Multiple Bindings**: Queues can bind to multiple routing keys
 - **Error Handling**: Comprehensive error handling with message acknowledgment
 - **Message Persistence**: Options for message persistence and queue durability
