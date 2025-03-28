@@ -1,7 +1,6 @@
 import { InternalServerErrorException } from '@nestjs/common';
 import * as amqp from 'amqplib';
-
-import { EXCHANGE_NAME } from './queue.constants';
+import { EXCHANGE_NAME, EXCHANGE_TYPE, queues } from './queue.constants';
 import { IQueue } from './queue.interface';
 import { IPublishMessage } from './publish-message.interface';
 import 'dotenv/config';
@@ -9,8 +8,7 @@ import 'dotenv/config';
 export class RabbitMQConfig {
   private static connection: amqp.ChannelModel;
   private static channel: any = null;
-
-  private static readonly typeExchange = 'fanout';
+  private static readonly typeExchange = 'fanoult';
 
   static async connect(): Promise<void> {
     try {
@@ -31,8 +29,7 @@ export class RabbitMQConfig {
   }
 
   private static async setupExchange(): Promise<void> {
-
-    await this.channel.assertExchange(EXCHANGE_NAME, 'fanout', {
+    await this.channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, {
       durable: true,
     });
   }
