@@ -4,6 +4,6 @@ import { RabbitMQService } from './rabbimq.service';
 
 @Module({
   controllers: [RabbiMqController],
-  providers: [RabbitMQService, RabbitMQService],
+  providers: [RabbitMQService],
 })
 export class RabbiMqModule {}

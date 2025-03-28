@@ -142,33 +142,302 @@ This will start RabbitMQ with:
 
 ## Implementation Details
 
-### 1. Queue Configuration (queue.constants.ts)
+### 1. Queue Constants (queue.constants.ts)
 ```typescript
-export const EXCHANGE_TYPE = 'direct';
-export const EXCHANGE_NAME = 'direct_exchange';
+import { IQueue } from './queue.interface';
+
+export const EXCHANGE_TYPE = 'direct' as const;
+export const EXCHANGE_NAME = 'direct_exchange' as const;
 
 export const queues: IQueue[] = [
   {
     name: 'queue1',
     durable: true,
-    routingKeys: ['key1', 'key2']
+    routingKeys: ['key1', 'key2'],
   },
-  // ... other queues
+  {
+    name: 'queue2',
+    durable: false,
+    routingKeys: ['key1', 'key2'],
+  },
+  {
+    name: 'queue3',
+    durable: true,
+    routingKeys: ['key3'],
+  },
+  {
+    name: 'queue4',
+    durable: true,
+    routingKeys: ['key4'],
+  },
 ];
+
 ```
 
-### 2. Message Publishing (rabbitmq.service.ts)
+### 2. Queue Confiiguration (queue.config.ts)
+```typescript
+import { InternalServerErrorException } from '@nestjs/common';
+import * as amqp from 'amqplib';
+import { EXCHANGE_NAME, EXCHANGE_TYPE, queues } from './queue.constants';
+import { IQueue } from './queue.interface';
+import { IPublishMessage } from './publish-message.interface';
+import 'dotenv/config';
+
+export class RabbitMQConfig {
+  private static connection: amqp.ChannelModel;
+  private static channel: any = null;
+  private static readonly typeExchange = 'direct';
+
+  static async connect(): Promise<void> {
+    try {
+      this.connection = await amqp.connect(process.env.RABBITMQ_URL, {
+        timeout: 15000,
+        heartbeat: 60,
+      });
+
+      if (this.connection) {
+        this.channel = await this.connection.createChannel();
+
+        await this.channel.assertExchange(this.typeExchange, 'direct', {
+          durable: true,
+        });
+
+        await this.setupExchange();
+        await this.setupQueuesAndBindings();
+      }
+    } catch (error) {
+      throw new InternalServerErrorException('Error connecting to RabbitMQ:', error);
+    }
+  }
+
+  private static async setupExchange(): Promise<void> {
+    await this.channel.assertExchange(EXCHANGE_NAME, EXCHANGE_TYPE, {
+      durable: true,
+    });
+  }
+
+  private static async setupQueuesAndBindings(): Promise<void> {
+    for (const queue of queues) {
+      await this.setupQueue(queue);
+    }
+  }
+
+  private static async setupQueue(queue: IQueue): Promise<void> {
+    await this.channel.assertQueue(queue.name, { durable: queue.durable });
+
+    for (const routingKey of queue.routingKeys) {
+      await this.channel.bindQueue(queue.name, EXCHANGE_NAME, routingKey);
+    }
+  }
+
+  static getChannel(): amqp.Channel {
+    if (!this.channel) {
+      throw new InternalServerErrorException('RabbitMQ channel not initialized');
+    }
+    return this.channel;
+  }
+
+  static async publishMessage({ routingKey, message, options }: IPublishMessage): Promise<boolean> {
+    try {
+      if (options.queueName) {
+        await this.channel.assertQueue(options.queueName, { durable: true });
+        await this.channel.bindQueue(options.queueName, EXCHANGE_NAME, routingKey);
+      }
+
+      return this.channel.publish(EXCHANGE_NAME, routingKey, Buffer.from(JSON.stringify(message)), {
+        persistent: options.persistent ?? true,
+        options,
+      });
+    } catch (error) {
+      throw new InternalServerErrorException('Error publishing message:', error);
+    }
+  }
+
+  static async closeConnection(): Promise<void> {
+    try {
+      if (this.channel) {
+        await this.channel.close();
+      }
+      if (this.connection) {
+        await this.connection.close();
+      }
+    } catch (error) {
+      throw new InternalServerErrorException('Error closing RabbitMQ connection:', error);
+    }
+  }
+}
+```
+
+### 3. Message Publishing (rabbitmq.service.ts)
 Example of sending messages to different queues:
 
 ```typescript
-// Send to queue1 with key1
-await sendToQueue1key1(message: string)
+import { Injectable, OnModuleInit, OnModuleDestroy, InternalServerErrorException } from '@nestjs/common';
+import { RabbitMQConfig } from './rabbitmq.config';
 
-// Send to queue2 with key2
-await sendToQueue2key2(message: string)
+@Injectable()
+export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
+  constructor() {}
+
+  async onModuleInit() {
+    await RabbitMQConfig.connect();
+  }
+
+  async onModuleDestroy() {
+    await RabbitMQConfig.closeConnection();
+  }
+
+  async sendToQueue1key1(message: string): Promise<boolean> {
+    try {
+      await RabbitMQConfig.publishMessage({
+        routingKey: 'key1',
+        message: message,
+        options: {
+          persistent: true,
+          queueName: 'queue1',
+        },
+      });
+
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async sendToQueue1key2(message: string): Promise<boolean> {
+    try {
+      await RabbitMQConfig.publishMessage({
+        routingKey: 'key2',
+        message: message,
+        options: {
+          persistent: true,
+          queueName: 'queue1',
+        },
+      });
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async sendToQueue2key1(message: string): Promise<boolean> {
+    try {
+      await RabbitMQConfig.publishMessage({
+        routingKey: 'key1',
+        message: message,
+        options: {
+          persistent: true,
+          queueName: 'queue2',
+        },
+      });
+
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async sendToQueue2key2(message: string): Promise<boolean> {
+    try {
+      await RabbitMQConfig.publishMessage({
+        routingKey: 'key2',
+        message: message,
+        options: {
+          persistent: true,
+          queueName: 'queue2',
+        },
+      });
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async sendToQueue3(message: string): Promise<boolean> {
+    try {
+      await RabbitMQConfig.publishMessage({
+        routingKey: 'key3',
+        message: message,
+        options: {
+          persistent: true,
+          queueName: 'queue3',
+        },
+      });
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+
+  async sendToQueue4(message: any): Promise<boolean> {
+    try {
+      await RabbitMQConfig.publishMessage({
+        routingKey: 'key4',
+        message: message,
+        options: {
+          persistent: true,
+          queueName: 'queue4',
+        },
+      });
+      return true;
+    } catch (error) {
+      throw new InternalServerErrorException(error);
+    }
+  }
+}
+
 ```
 
-### 3. Message Consumer (rabbit-mq-consumer.service.ts)
+### 4. Rabbitmq Controller (rabbitmq.controller.ts)
+```typescript
+import { Body, Controller, Post } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
+import { RabbitMQService } from './rabbimq.service';
+
+@Controller('rabbimq')
+@ApiTags('rabbimq')
+export class RabbiMqController {
+  constructor(private readonly rabbitMQService: RabbitMQService) {}
+
+  @Post('queue1-key1')
+  async sendMessageQueue1Key1(@Body() message: string) {
+    const result = await this.rabbitMQService.sendToQueue1key1(message);
+    return { success: result, message: 'Message sent to queue' };
+  }
+
+  @Post('queue1-key2')
+  async sendMessageQueue1Key2(@Body() message: string) {
+    const result = await this.rabbitMQService.sendToQueue1key2(message);
+    return { success: result, message: 'Message sent to queue' };
+  }
+
+  @Post('queue2-key1')
+  async sendMessageQueue2Key1(@Body() message: string) {
+    const result = await this.rabbitMQService.sendToQueue2key1(message);
+    return { success: result, message: 'Message sent to queue' };
+  }
+
+  @Post('queue2-key2')
+  async sendMessageQueue2Key2(@Body() message: string) {
+    const result = await this.rabbitMQService.sendToQueue2key2(message);
+    return { success: result, message: 'Message sent to queue' };
+  }
+
+  @Post('queue3')
+  async sendMessageQueue3(@Body() message: string) {
+    const result = await this.rabbitMQService.sendToQueue3(message);
+    return { success: result, message: 'Message sent to queue' };
+  }
+
+  @Post('queue4')
+  async sendMessageQueue4(@Body() message: string) {
+    const result = await this.rabbitMQService.sendToQueue3(message);
+    return { success: result, message: 'Message sent to queue' };
+  }
+}
+```
+
+### 5. Message Consumer (rabbit-mq-consumer.service.ts)
 ```typescript
 @Injectable()
 export class ConsumerService implements OnModuleInit {
@@ -199,7 +468,7 @@ export class ConsumerService implements OnModuleInit {
 }
 ```
 
-### 4. Message Options Interface
+### 6. Message Options Interface
 ```typescript
 interface IMessageOptions {
   persistent?: boolean;
@@ -207,6 +476,13 @@ interface IMessageOptions {
   expiration?: string | number;
   priority?: number;
 }
+
+export interface IPublishMessage {
+  routingKey: string;
+  message: string;
+  options?: IMessageOptions;
+}
+
 ```
 
 ## Features
@@ -241,154 +517,3 @@ The RabbitMQ connection is managed through `RabbitMQConfig` class which handles:
 3. Proper channel and connection management
 4. Graceful shutdown handling
 5. Comprehensive error handling and logging
-
-# Tutorial in portuguese
-# RabbitMQ Direct Exchange NestJS Microservice
-
-Este projeto demonstra uma implementação RabbitMQ usando o padrão Direct Exchange com microsserviços NestJS.
-
-## Visão Geral da Arquitetura
-
-- **Tipo de Exchange**: Direct
-- **Nome do Exchange**: direct_exchange
-- **Durabilidade do Exchange**: Durável (sobrevive a reinicializações do broker)
-
-### Configuração das Filas
-
-Temos 4 filas configuradas com diferentes propriedades:
-
-1. **queue1**
-   - Durável: sim
-   - Chaves de Roteamento: ['key1', 'key2']
-
-2. **queue2**
-   - Durável: não
-   - Chaves de Roteamento: ['key1', 'key2']
-
-3. **queue3**
-   - Durável: sim
-   - Chave de Roteamento: ['key3']
-
-4. **queue4**
-   - Durável: sim
-   - Chave de Roteamento: ['key4']
-
-## Instruções de Configuração
-
-1. Inicie o RabbitMQ usando Docker:
-
-```bash
-docker-compose up -d
-```
-
-Isso iniciará o RabbitMQ com:
-- Interface de gerenciamento na porta 15672
-- AMQP na porta 5672
-- Credenciais padrão: admin/admin
-
-2. Acesse a Interface de Gerenciamento do RabbitMQ:
-- URL: http://localhost:15672
-- Usuário: admin
-- Senha: admin
-
-## Detalhes da Implementação
-
-### 1. Configuração das Filas (queue.constants.ts)
-```typescript
-export const EXCHANGE_TYPE = 'direct';
-export const EXCHANGE_NAME = 'direct_exchange';
-
-export const queues: IQueue[] = [
-  {
-    name: 'queue1',
-    durable: true,
-    routingKeys: ['key1', 'key2']
-  },
-  // ... outras filas
-];
-```
-
-### 2. Publicação de Mensagens (rabbitmq.service.ts)
-Exemplo de envio de mensagens para diferentes filas:
-
-```typescript
-// Enviar para queue1 com key1
-await sendToQueue1key1(message: string)
-
-// Enviar para queue2 com key2
-await sendToQueue2key2(message: string)
-```
-
-### 3. Consumidor de Mensagens (rabbit-mq-consumer.service.ts)
-```typescript
-@Injectable()
-export class ConsumerService implements OnModuleInit {
-  async onModuleInit() {
-    await RabbitMQConfig.connect();
-    await this.setupConsumers();
-  }
-
-  private async setupConsumers(): Promise<void> {
-    const channel = RabbitMQConfig.getChannel();
-    
-    for (const queue of queues) {
-      await channel.assertQueue(queue.name, { 
-        durable: queue.durable 
-      });
-      
-      channel.consume(queue.name, async (message) => {
-        try {
-          const content = JSON.parse(message.content.toString());
-          await this.processMessage(content, queue.name);
-          channel.ack(message);
-        } catch (error) {
-          channel.nack(message, false, true);
-        }
-      });
-    }
-  }
-}
-```
-
-### 4. Interface de Opções de Mensagem
-```typescript
-interface IMessageOptions {
-  persistent?: boolean;
-  queueName?: string;
-  expiration?: string | number;
-  priority?: number;
-}
-```
-
-## Funcionalidades
-
-- **Durabilidade**: Mensagens persistem através de reinicializações do broker
-- **Direct Exchange**: Mensagens são roteadas com base em correspondências exatas de chaves de roteamento
-- **Múltiplos Bindings**: Filas podem se vincular a múltiplas chaves de roteamento
-- **Tratamento de Erros**: Tratamento abrangente de erros com confirmação de mensagens
-- **Persistência de Mensagens**: Opções para persistência de mensagens e durabilidade de filas
-
-## Gerenciamento de Conexão
-
-A conexão RabbitMQ é gerenciada através da classe `RabbitMQConfig` que lida com:
-- Estabelecimento de conexão
-- Criação de canal
-- Configuração de exchange
-- Criação de filas e bindings
-- Publicação de mensagens
-- Fechamento adequado de conexão
-
-## Tratamento de Erros
-
-- Mensagens são confirmadas apenas após processamento bem-sucedido
-- Mensagens com falha são recolocadas na fila usando `channel.nack()`
-- Erros de conexão são tratados com mensagens apropriadas
-- Tentativas automáticas de reconexão em caso de falha
-
-## Melhores Práticas Implementadas
-
-1. Exchanges e filas duráveis para mensagens críticas
-2. Persistência de mensagens para dados importantes
-3. Gerenciamento adequado de canais e conexões
-4. Tratamento adequado de desligamento
-5. Tratamento e registro abrangente de erros
