@@ -1,5 +1,3 @@
-import { Body, Controller, Post } from '@nestjs/common';
-import { ApiTags } from '@nestjs/swagger';
 import { RabbitMQService } from './rabbimq.service';
 
 @Controller('rabbimq')
