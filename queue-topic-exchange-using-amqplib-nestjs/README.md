@@ -4,8 +4,8 @@ This project demonstrates a RabbitMQ implementation using Direct Exchange patter
 
 ## Architecture Overview
 
-- **Exchange Type**: Direct
-- **Exchange Name**: direct_exchange
+- **Exchange Type**: topic
+- **Exchange Name**: topic_exchange
 - **Exchange Durability**: Durable (survives broker restarts)
 
 ### Queue Configuration
@@ -52,8 +52,8 @@ This will start RabbitMQ with:
 ```typescript
 import { IQueue } from './queue.interface';
 
-export const EXCHANGE_TYPE = 'direct' as const;
-export const EXCHANGE_NAME = 'direct_exchange' as const;
+export const EXCHANGE_TYPE = 'topic' as const;
+export const EXCHANGE_NAME = 'topic_exchange' as const;
 
 export const queues: IQueue[] = [
   {
@@ -92,7 +92,7 @@ import 'dotenv/config';
 export class RabbitMQConfig {
   private static connection: amqp.ChannelModel;
   private static channel: any = null;
-  private static readonly typeExchange = 'direct';
+  private static readonly typeExchange = 'topic';
 
   static async connect(): Promise<void> {
     try {

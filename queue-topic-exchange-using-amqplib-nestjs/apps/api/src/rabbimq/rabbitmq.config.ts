@@ -8,7 +8,7 @@ import 'dotenv/config';
 export class RabbitMQConfig {
   private static connection: amqp.ChannelModel;
   private static channel: any = null;
-  private static readonly typeExchange = 'direct';
+  private static readonly typeExchange = 'topic';
 
   static async connect(): Promise<void> {
     try {
