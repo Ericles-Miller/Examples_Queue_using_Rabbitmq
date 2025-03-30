@@ -7,12 +7,12 @@ export const queues: IQueue[] = [
   {
     name: 'queue1',
     durable: true,
-    routingKeys: ['key1', 'key2'],
+    routingKeys: ['Q1-key1', 'Q1-key2'],
   },
   {
     name: 'queue2',
     durable: false,
-    routingKeys: ['key1', 'key2'],
+    routingKeys: ['Q2-key1', 'Q2-key2'],
   },
   {
     name: 'queue3',

@@ -8,7 +8,7 @@ import 'dotenv/config';
 export class RabbitMQConfig {
   private static connection: amqp.ChannelModel;
   private static channel: any = null;
-  private static readonly typeExchange = 'direct';
+  private static isInitialized = false;
 
   static async connect(): Promise<void> {
     try {
@@ -26,6 +26,10 @@ export class RabbitMQConfig {
     } catch (error) {
       throw new InternalServerErrorException('Error connecting to RabbitMQ:', error);
     }
+  }
+
+  static isConnected(): boolean {
+    return this.isInitialized && this.channel !== null && this.connection !== null;
   }
 
   private static async setupExchange(): Promise<void> {
@@ -57,11 +61,6 @@ export class RabbitMQConfig {
 
   static async publishMessage({ routingKey, message, options }: IPublishMessage): Promise<boolean> {
     try {
-      if (options.queueName) {
-        await this.channel.assertQueue(options.queueName, { durable: true });
-        await this.channel.bindQueue(options.queueName, EXCHANGE_NAME, routingKey);
-      }
-
       return this.channel.publish(EXCHANGE_NAME, routingKey, Buffer.from(JSON.stringify(message)), {
         persistent: options.persistent ?? true,
         options,
