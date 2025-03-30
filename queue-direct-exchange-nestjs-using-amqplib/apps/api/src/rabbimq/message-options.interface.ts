@@ -3,4 +3,5 @@ export interface IMessageOptions {
   queueName?: string;
   expiration?: string | number;
   priority?: number;
+  durable: boolean;
 }

@@ -1,5 +1,6 @@
 import { Injectable, OnModuleInit, OnModuleDestroy, InternalServerErrorException } from '@nestjs/common';
 import { RabbitMQConfig } from './rabbitmq.config';
+import { ProducerDto } from './producer.dto';
 
 @Injectable()
 export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
@@ -13,14 +14,15 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     await RabbitMQConfig.closeConnection();
   }
 
-  async sendToQueue1key1(message: string): Promise<boolean> {
+  async sendToQueue1key1({ message }: ProducerDto): Promise<boolean> {
     try {
       await RabbitMQConfig.publishMessage({
-        routingKey: 'key1',
+        routingKey: 'Q1-key1',
         message: message,
         options: {
           persistent: true,
           queueName: 'queue1',
+          durable: true,
         },
       });
 
@@ -30,14 +32,15 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendToQueue1key2(message: string): Promise<boolean> {
+  async sendToQueue1key2({ message }: ProducerDto): Promise<boolean> {
     try {
       await RabbitMQConfig.publishMessage({
-        routingKey: 'key2',
+        routingKey: 'Q1-key2',
         message: message,
         options: {
           persistent: true,
           queueName: 'queue1',
+          durable: true,
         },
       });
       return true;
@@ -46,14 +49,15 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendToQueue2key1(message: string): Promise<boolean> {
+  async sendToQueue2key1({ message }: ProducerDto): Promise<boolean> {
     try {
       await RabbitMQConfig.publishMessage({
-        routingKey: 'key1',
+        routingKey: 'Q2-key1',
         message: message,
         options: {
           persistent: true,
           queueName: 'queue2',
+          durable: false,
         },
       });
 
@@ -63,14 +67,15 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendToQueue2key2(message: string): Promise<boolean> {
+  async sendToQueue2key2({ message }: ProducerDto): Promise<boolean> {
     try {
       await RabbitMQConfig.publishMessage({
-        routingKey: 'key2',
+        routingKey: 'Q2-key2',
         message: message,
         options: {
-          persistent: true,
+          persistent: false,
           queueName: 'queue2',
+          durable: false,
         },
       });
       return true;
@@ -79,7 +84,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendToQueue3(message: string): Promise<boolean> {
+  async sendToQueue3({ message }: ProducerDto): Promise<boolean> {
     try {
       await RabbitMQConfig.publishMessage({
         routingKey: 'key3',
@@ -87,6 +92,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         options: {
           persistent: true,
           queueName: 'queue3',
+          durable: true,
         },
       });
       return true;
@@ -95,7 +101,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async sendToQueue4(message: any): Promise<boolean> {
+  async sendToQueue4({ message }: ProducerDto): Promise<boolean> {
     try {
       await RabbitMQConfig.publishMessage({
         routingKey: 'key4',
@@ -103,6 +109,7 @@ export class RabbitMQService implements OnModuleInit, OnModuleDestroy {
         options: {
           persistent: true,
           queueName: 'queue4',
+          durable: true,
         },
       });
       return true;
